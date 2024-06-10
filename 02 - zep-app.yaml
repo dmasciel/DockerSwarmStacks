@@ -1,0 +1,125 @@
+version: "3.7"
+
+# Você precisa do apache2-utils para gerar a senha. Para instalar o apache2-utils execute no servidor:
+# apt-get install -y apache2-utils
+#
+# USER: SEUUSER
+# SENHA: SUASENHA
+#
+# Para gerar a senha do Zep, execute o comando no terminal:
+# echo $(htpasswd -nb user password) | sed -e s/\\$/\\$\\$/g
+#  echo $(htpasswd -nb SEUDOMINIO 3s5FQY2dS8hjRq1b) | sed -e s/\\$/\\$\\$/g
+# troque o user e password pelo usuário e senha desejado
+# execute até não ter nada no final da senha gerada
+# no meu gerou esta aqui:
+# SEUUSER:$$apr1$$/pZiybim$$fEteaUrdGuzgW61q9H5Xs.
+# cole na linha abaixo: Configura a autenticação basic-auth para o Zep
+
+services:
+
+  # Define o Serviço de NLP do Zep
+  zepnlp:
+    # usa uma imagem customizada do NLP do próprio zep
+    # https://github.com/getzep/zep-nlp-server/pkgs/container/zep-nlp-server
+    #image: ghcr.io/getzep/zep-nlp-server:latest
+    image: ghcr.io/getzep/zep-nlp-server:0.4.2
+    # Configura a rede do Postgres
+    networks:
+      - network_public
+    # Configura as Variáveis de Ambiente do NLP
+    environment:
+      # Token do OpenAI
+      # não precisa preencher aqui. vou alimentar via n8n ou via flowise
+      - ZEP_OPENAI_API_KEY=CHAVE-DO-OPENAI
+
+  # Define o Serviço do ZEP
+  zep:
+    # usa uma imagem customizada do ZEP do próprio zep
+    # https://github.com/getzep/zep/pkgs/container/zep-cloud
+    #image: ghcr.io/getzep/zep-cloud:latest
+    image: ghcr.io/getzep/zep-cloud:0.25
+    # Configura a rede do Zep
+    networks:
+      - network_public
+    environment:
+      # Configura o Zep para usar o Postgres
+      - ZEP_STORE_TYPE=postgres
+      # Configura o DSN do Postgres
+      - ZEP_STORE_POSTGRES_DSN=postgres://postgres:SUASENHA@zepdb:5432/postgres?sslmode=disable
+      # Configura o NLP do Zep
+      - ZEP_NLP_SERVER_URL=http://zepnlp:5557
+      # Configura o Token do OpenAI
+      - ZEP_OPENAI_API_KEY=CHAVE-DO-OPENAI
+      # Configura o modelo do OpenAI do Zep
+      - ZEP_LLM_MODEL=gpt-3.5-turbo
+      # Configura o tamanho da memoria do Zep
+      - ZEP_MEMORY_MESSAGE_WINDOW=12
+      # Habilita o Extractor de Documento
+      - ZEP_EXTRACTORS_DOCUMENTS_EMBEDDINGS_ENABLED=true
+      - ZEP_EXTRACTORS_DOCUMENTS_EMBEDDINGS_DIMENSIONS=1536
+      - ZEP_EXTRACTORS_DOCUMENTS_EMBEDDINGS_SERVICE=openai
+      - ZEP_EXTRACTORS_DOCUMENTS_EMBEDDINGS_CHUNK_SIZE=1000
+      # Habilita o Summarizer de Mensagem
+      - ZEP_EXTRACTORS_MESSAGES_SUMMARIZER_ENABLED=true
+      - ZEP_EXTRACTORS_MESSAGES_ENTITIES_ENABLED=true
+      - ZEP_EXTRACTORS_MESSAGES_INTENT_ENABLED=true
+      - ZEP_EXTRACTORS_MESSAGES_EMBEDDINGS_ENABLED=true
+      - ZEP_EXTRACTORS_MESSAGES_EMBEDDINGS_DIMENSIONS=1536
+      - ZEP_EXTRACTORS_MESSAGES_EMBEDDINGS_SERVICE=openai
+      # Configura o bind de rede do zep
+      - ZEP_SERVER_HOST=0.0.0.0
+      # Configura a porta do Zep
+      - ZEP_SERVER_PORT=8000
+      # Habilita a interface Web do Zep
+      - ZEP_SERVER_WEB_ENABLED=true
+      # Configura o nível de log do Zep
+      - ZEP_LOG_LEVEL=info
+      # Carrega o Zep no modo de desenvolvimento
+      - ZEP_DEVELOPMENT=false
+    deploy:
+      mode: replicated # sempre como replicated
+      replicas: 1 # geralmente somente 1 réplica
+      placement:
+        constraints:
+          #- node.role == manager
+          - node.hostname == database01
+          # - node.hostname == worker1
+      resources:
+        limits:
+          # Define a quantidade de CPU para evitar travamento do Host
+          cpus: "1"
+          # Define a quantidade de RAM para evitar travamento do Host
+          memory: 1024M
+      labels:
+        # Configura o Traefik para usar o Zep
+        - traefik.enable=true
+        # Habilita o Domínio do Zep
+        - traefik.http.routers.zep.rule=Host(`zep.SEUDOMINIO.com.br`)
+        # Redireciona o Zeo oara https
+        - traefik.http.routers.zep.entrypoints=websecure
+        # Configura o Certificado do Zep
+        - traefik.http.routers.zep.tls.certresolver=letsencryptresolver
+        # Configura a porta do Zep
+        - traefik.http.services.zep.loadBalancer.server.port=8000
+        # Configura o Serviço do Zep
+        - traefik.http.routers.zep.service=zep
+        # Configura o Roteamento do Admin e API do Zep
+        - traefik.http.routers.zep_admin.rule=(Host(`zep.SEUDOMINIO.com.br`) && ( PathPrefix(`/admin`) || PathPrefix(`/api`) ))
+        # Redireciona o Admin e API do Zep para https
+        - traefik.http.routers.zep_admin.entrypoints=websecure
+        # Configura o Certificado do Admin e API do Zep
+        - traefik.http.routers.zep_admin.tls.certresolver=letsencryptresolver
+        # Configura a porta do Admin e API do Zep
+        - traefik.http.services.zep_admin.loadBalancer.server.port=8000
+        # Configura o Serviço do Admin e API do Zep
+        - traefik.http.routers.zep_admin.service=zep_admin
+        # Configura a autenticação basic-auth para o Zep
+        #- traefik.http.middlewares.zep-auth.basicauth.users=user:$$apr1$$w6BYX5mT$$VGjVC4/y3c3VRmui7luaD1
+        - traefik.http.middlewares.zep-auth.basicauth.users=SEUUSER:$$apr1$$/pZiybim$$fEteaUrdGuzgW61q9H5Xs.
+        - traefik.http.routers.zep_admin.middlewares=zep-auth@docker
+
+# Configura a rede do Postgres
+networks:
+  network_public:
+    name: network_public
+    external: true
