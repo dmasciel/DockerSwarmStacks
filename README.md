@@ -36,5 +36,5 @@ Certifique-se de ter o Docker e o Docker Swarm configurados em seu ambiente. Par
 ### Clonando o Repositório
 
 ```bash
-git clone https://github.com/dmasciel/DockerSwarmStacks-.git
+git clone https://github.com/dmasciel/DockerSwarmStacks.git
 cd DockerSwarmStacks-
