@@ -1,0 +1,48 @@
+version: "3.7"
+
+services:
+
+  # Define o Serviço do Postgres exclusivo do ZEP
+  zepdb:
+    # usa uma imagem customizada do Postgres do próprio zep
+    # https://github.com/getzep/zep/pkgs/container/postgres
+    #image: ghcr.io/getzep/postgres:latest
+    image: ghcr.io/getzep/postgres:postgres-15
+    environment:
+      # Configura o usuário do Postgres
+      - POSTGRES_USER=postgres
+      # Configura a senha do Postgres
+      # gere sua senha aqui: https://acte.ltd/utils/randomkeygen
+      - POSTGRES_PASSWORD=SUASENHA
+    # Configura a rede do Postgres
+    networks:
+      - network_public
+    # Configura o volume do Postgres
+    volumes:
+      - zepdb_data:/var/lib/postgresql/data
+    deploy:
+      mode: replicated # sempre como replicated
+      replicas: 1 # geralmente somente 1 réplica
+      placement:
+        constraints:
+          #- node.role == manager
+          - node.hostname == database01
+          # - node.hostname == worker1
+      resources:
+        limits:
+          # Define a quantidade de CPU para o Evolution para evitar travamento do Host
+          cpus: "0.5"
+          # Define a quantidade de RAM para o Evolution para evitar travamento do Host
+          memory: 512M
+
+# Configura a rede do Postgres
+networks:
+  network_public:
+    name: network_public
+    external: true
+
+# Configura o volume do Postgres
+volumes:
+  zepdb_data:
+    name: zepdb_data
+    external: true
