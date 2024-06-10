@@ -7,6 +7,7 @@ Bem-vindo ao repositório de stacks para Docker Swarm! Este projeto oferece uma 
 Este repositório contém stacks para os seguintes serviços:
 
 - **ZEP**: Plataforma para desenvolvimento de aplicações de IA.
+  - **Recomendação**: 4 CPUs e 4 GB de memória.
 
 ## Próximas Ferramentas a serem incluídas
 - **RabbitMQ**: Sistema de mensageria.
