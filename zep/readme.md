@@ -2,9 +2,9 @@
 
 ## Arquivos de Stack
 
-- **01-01-zep-db.yaml**: Stack do PostgreSQL exclusivo para o ZEP.
-- Recomendação: 2 CPU E 4 GB MEMÓRIA
-- **02-02-zep-app.yaml**: Stack do Serviço e do Aplicativo do ZEP.
+- **01-zep-db.yaml**: Stack do PostgreSQL exclusivo para o ZEP.
+  - Recomendação: 2 CPU E 4 GB MEMÓRIA
+- **02-zep-app.yaml**: Stack do Serviço e do Aplicativo do ZEP.
 
 ## Segurança
 
@@ -90,3 +90,7 @@ Para conectar o Flowise ao ZEP, siga as instruções abaixo:
 ---
 
 A configuração acima garante que sua aplicação ZEP esteja segura e que o Flowise possa se conectar corretamente.
+
+
+
+
